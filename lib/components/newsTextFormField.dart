@@ -58,6 +58,18 @@ class _NewsTextFormFieldState extends State<NewsTextFormField> {
         validator: (value) => _validator(value, widget.validatorMsg),
         controller: widget.textController,
         focusNode: widget.focusNode,
+        onChanged: (value) {
+          setState(() {
+            widget.textController.value = widget.textController.value.copyWith(
+              text: value,
+              selection: TextSelection(
+                baseOffset: value.length,
+                extentOffset: value.length
+              ),
+              composing: TextRange.empty
+            );
+          });
+        },
         onTap: () => _requestFocus(widget.focusNode),
         cursorColor: color.primaryColor,
         keyboardType: widget.keyboardType,
@@ -75,7 +87,18 @@ class _NewsTextFormFieldState extends State<NewsTextFormField> {
               color: color.primaryColor,
               width: 2
             )
-          )
+          ),
+          suffixIcon: widget.textController.text.isNotEmpty
+            ? IconButton(
+                icon: Icon(Icons.clear),
+                color: widget.focusNode.hasFocus ? color.primaryColor : null,
+                onPressed: () {
+                  setState(() {
+                    widget.textController = TextEditingController();
+                  });
+                }
+              )
+            : null
         ),
       )
     );

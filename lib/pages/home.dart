@@ -19,7 +19,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final _env = Env();
 
   List<dynamic>? news;
-  bool teste = false;
 
   @override
   void initState() {

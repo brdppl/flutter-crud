@@ -5,6 +5,8 @@ class News {
   String _content = '';
   bool _active = false;
   String _img = '';
+  String _createdAt = '';
+  String _updatedAt = '';
 
   String get id {
     return _id;
@@ -28,5 +30,13 @@ class News {
 
   String get img {
     return _img;
+  }
+
+  String get createdAt {
+    return _createdAt;
+  }
+
+  String get updatedAt {
+    return _updatedAt;
   }
 }

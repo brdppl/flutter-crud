@@ -18,36 +18,35 @@ class _MyHomePageState extends State<MyHomePage> {
   final color = ProjectColors();
   final _env = Env();
 
-  List<dynamic>? news;
+  late Future<dynamic> futureNews;
+  List<dynamic> newsList = [];
 
   @override
   void initState() {
     super.initState();
     print('alive');
-    fetchNews().then((value) => {
-      setState(() {
-        this.news = value;
-      })
-    });
+    futureNews = fetchNews();
   }
 
-  Future<List<dynamic>> fetchNews() async {
+  Future<dynamic> fetchNews() async {
     final response = await http.get(Uri.parse('${_env.baseUrl}/news'));
     var body = jsonDecode(response.body);
-    List<dynamic> news = body['data'];
+    List<dynamic> data = body['data'];
 
     try {
-      // return news.where((element) => element['active'] == false).toList();
-      return news;
-    } catch(e) {
-      throw Exception('Failed');
+      setState(() {
+        this.newsList = data;
+      });
+      return data;
+    } catch (e) {
+      throw Exception(e);
     }
   }
 
   Future<void> _refresh() async {
-    var res = await fetchNews();
+    await fetchNews();
     setState(() {
-      this.news = res;
+      futureNews = fetchNews();
     });
   }
 
@@ -67,10 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     var body = jsonDecode(response.body);
     if(body['status']) {
-      _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(body['msg'])),
-      );
+      _refresh().then((value) => _handleSnackBar(body['msg']));
     }
   }
 
@@ -78,8 +74,14 @@ class _MyHomePageState extends State<MyHomePage> {
     final response = await http.delete(Uri.parse('${_env.baseUrl}/news/$id'));
     var body = jsonDecode(response.body);
     if(body['status']) {
-      _refresh();
+      _refresh().then((value) => _handleSnackBar(body['msg']));
     }
+  }
+
+  _handleSnackBar(String value) {
+    return ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(value)),
+    );
   }
 
   @override
@@ -105,7 +107,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ]
       ),
       body: FutureBuilder(
-        future: fetchNews(),
+        future: futureNews,
         builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
           if(snapshot.hasData) {
             return RefreshIndicator(
@@ -115,60 +117,26 @@ class _MyHomePageState extends State<MyHomePage> {
                 physics: AlwaysScrollableScrollPhysics(),
                 itemCount: snapshot.data.length,
                 itemBuilder: (context, index) {
-                  var news = snapshot.data[index];
+                  var news = this.newsList[index];
                   return Column(
                     children: <Widget>[
-                      // Using Dismissible, native from Flutter
-                      // Dismissible(
-                      //   key: UniqueKey(),
-                      //   direction: DismissDirection.endToStart,
-                      //   onDismissed: (direction) {
-                      //     if(direction == DismissDirection.endToStart) {
-                      //       _delete(news['_id']);
-                      //     }
-                      //   },
-                      //   background: Container(
-                      //     color: Colors.red,
-                      //     child: Align(
-                      //       alignment: Alignment.centerRight,
-                      //       child: Padding(
-                      //         padding: EdgeInsets.only(right: 16),
-                      //         child: Icon(Icons.delete, color: Colors.white),
-                      //       )
-                      //     )
-                      //   ),
-                      //   child: Card(
-                      //     child: ListTile(
-                      //       title: Text(news['title']),
-                      //       subtitle: Text(news['author']),
-                      //       // trailing: Icon(Icons.more_vert)
-                      //       trailing: Switch(
-                      //         value: news['active'],
-                      //         activeColor: color.primaryColor,
-                      //         onChanged: (value) {
-                      //           _activate(news, value);
-                      //         },
-                      //       ),
-                      //     ),
-                      //   ),
-                      // )
                       Slidable(
                         key: UniqueKey(),
                         actionPane: SlidableDrawerActionPane(),
                         actionExtentRatio: 0.25,
                         child: Card(
-                          child: ListTile(
+                          child: SwitchListTile(
                             title: Text(news['title']),
                             subtitle: Text(news['author']),
-                            // trailing: Icon(Icons.more_vert)
-                            trailing: Switch(
-                              value: news['active'],
-                              activeColor: color.primaryColor,
-                              onChanged: (value) {
-                                _activate(news, value);
-                              },
-                            ),
-                          ),
+                            activeColor: color.primaryColor,
+                            value: news['active'],
+                            onChanged: (value) {
+                              setState(() {
+                                news['active'] = value;
+                              });
+                              _activate(news, value);
+                            },
+                          )
                         ),
                         actions: <Widget>[
                           IconSlideAction(
@@ -197,7 +165,12 @@ class _MyHomePageState extends State<MyHomePage> {
                             caption: 'Delete',
                             color: Colors.red,
                             icon: Icons.delete,
-                            onTap: () => _delete(news['_id']),
+                            onTap: () {
+                              setState(() {
+                                this.newsList.remove(news);
+                              });
+                              _delete(news['_id']);
+                            },
                           ),
                         ],
                       ),
